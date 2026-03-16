@@ -60,8 +60,10 @@ const DEFAULT_PERIODS=[
   {p:"점심",s:"11:20",e:"12:10",br:true,fixed:true},
   {p:4,s:"12:10",e:"12:50",fixed:false},{p:5,s:"13:00",e:"13:40",fixed:false},{p:6,s:"13:50",e:"14:30",fixed:false}
 ];
-const SC={국어:"#FF6B6B",수학:"#FF9F43",영어:"#FFC312",과학:"#26de81",사회:"#4bcffa",음악:"#a55eea",미술:"#fd9644",체육:"#45aaf2",도덕:"#fd79a8",창체:"#00b894"};
-const SE={국어:"📖",수학:"🔢",영어:"🔤",과학:"🔬",사회:"🌍",음악:"🎵",미술:"🎨",체육:"⚽",도덕:"💛",창체:"🌈"};
+const DEFAULT_SC={국어:"#FF6B6B",수학:"#FF9F43",영어:"#FFC312",과학:"#26de81",사회:"#4bcffa",음악:"#a55eea",미술:"#fd9644",체육:"#45aaf2",도덕:"#fd79a8",창체:"#00b894"};
+const DEFAULT_SE={국어:"📖",수학:"🔢",영어:"🔤",과학:"🔬",사회:"🌍",음악:"🎵",미술:"🎨",체육:"⚽",도덕:"💛",창체:"🌈"};
+const EMOJI_LIST=["📖","🔢","🔤","🔬","🌍","🎵","🎨","⚽","💛","🌈","🏃","🎭","💻","🧮","📐","🖊️","🎤","🥁","🏊","🤸","🧘","🍳","🌱","🔭","🎯","🧩","📚","✏️","🎪","🌟"];
+const COLORS_LIST=["#FF6B6B","#FF9F43","#FFC312","#26de81","#4bcffa","#a55eea","#fd9644","#45aaf2","#fd79a8","#00b894","#e17055","#74b9ff","#a29bfe","#55efc4","#fdcb6e","#636e72","#b2bec3","#ff7675"];
 const MEMBERS=[{id:"mom",n:"엄마",e:"👩",c:"#FF6B9D"},{id:"dad",n:"아빠",e:"👨",c:"#4A90D9"},{id:"kid",n:"자녀",e:"🧒",c:"#F7B731"}];
 const AO=[{l:"없음",v:null},{l:"정시",v:0},{l:"5분 전",v:5},{l:"10분 전",v:10},{l:"30분 전",v:30},{l:"1시간 전",v:60}];
 const DOW=["일","월","화","수","목","금","토"];
@@ -73,11 +75,38 @@ const todayStr=()=>new Date().toISOString().slice(0,10);
 const dow=ds=>DOW[new Date(ds).getDay()];
 const fmt=ds=>ds.replace(/-/g,".");
 
+
+const SAVE_KEY='familyPlanner_v1';
+function saveToStorage(){
+  try{
+    const data={
+      tt:state.tt, events:state.events,
+      periods:state.periods, sc:state.sc, se:state.se
+    };
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  }catch(e){}
+}
+function loadFromStorage(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw)return null;
+    return JSON.parse(raw);
+  }catch(e){return null;}
+}
+
+const _saved=loadFromStorage();
+const _initEvents=(()=>{const e={};const n=new Date();for(let i=-10;i<60;i++){const d=new Date(n);d.setDate(n.getDate()+i);e[d.toISOString().slice(0,10)]=[]}return e})();
+const _initTT=(()=>{const t={};DAYS.forEach(d=>{t[d]={};DEFAULT_PERIODS.forEach(p=>{if(!p.br)t[d][p.p]=""})});return t})();
+
 let state={
   tab:"daily",
-  periods:JSON.parse(JSON.stringify(DEFAULT_PERIODS)),
-  tt:(()=>{const t={};DAYS.forEach(d=>{t[d]={};DEFAULT_PERIODS.forEach(p=>{if(!p.br)t[d][p.p]=""})});return t})(),
-  events:(()=>{const e={};const n=new Date();for(let i=-10;i<60;i++){const d=new Date(n);d.setDate(n.getDate()+i);e[d.toISOString().slice(0,10)]=[]}return e})(),
+  periods:_saved?.periods||JSON.parse(JSON.stringify(DEFAULT_PERIODS)),
+  sc:_saved?.sc||JSON.parse(JSON.stringify(DEFAULT_SC)),
+  se:_saved?.se||JSON.parse(JSON.stringify(DEFAULT_SE)),
+  showSubjectMgr:false,
+  editingSubject:null,
+  tt:_saved?.tt||_initTT,
+  events:(()=>{const base=_initEvents;if(_saved?.events){Object.keys(_saved.events).forEach(k=>{base[k]=_saved.events[k]});} return base;})(),
   selDate:todayStr(),
   calMonth:{year:new Date().getFullYear(),month:new Date().getMonth()},
   editing:null,editVal:"",
@@ -93,6 +122,35 @@ let state={
 
 const M=id=>MEMBERS.find(m=>m.id===id);
 const getPeriods=()=>state.periods||DEFAULT_PERIODS;
+const getSC=()=>state.sc||DEFAULT_SC;
+const getSE=()=>state.se||DEFAULT_SE;
+
+function addSubject(){
+  const name=state.editingSubject?.name?.trim();
+  if(!name)return;
+  const sc={...state.sc};
+  const se={...state.se};
+  sc[name]=state.editingSubject.color||"#b2bec3";
+  se[name]=state.editingSubject.emoji||"📚";
+  setState({sc,se,editingSubject:null});
+}
+function deleteSubject(name){
+  const sc={...state.sc};
+  const se={...state.se};
+  delete sc[name];
+  delete se[name];
+  setState({sc,se});
+}
+function updateSubjectEmoji(name,emoji){
+  const se={...state.se};
+  se[name]=emoji;
+  setState({se});
+}
+function updateSubjectColor(name,color){
+  const sc={...state.sc};
+  sc[name]=color;
+  setState({sc});
+}
 
 function saveTime(){
   if(!state.editingTime)return;
@@ -123,7 +181,7 @@ function deletePeriod(pNum){
   Object.keys(tt).forEach(d=>{delete tt[d][pNum];});
   setState({periods,tt,editing:null});
 }
-function setState(patch){Object.assign(state,patch);render()}
+function setState(patch){Object.assign(state,patch);render();saveToStorage();}
 
 function addEvent(){
   if(!state.newEv.title.trim())return;
@@ -255,9 +313,9 @@ function renderDaily(){
     html+=`<div style="position:absolute;top:${minToY(toMin("11:20"))}px;height:${minToH(toMin("11:20"),toMin("12:10"))}px;left:0;right:0;background:#fffbe655;border-left:4px solid #fdcb6e;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>🍱</span><div><div style="font-weight:700;font-size:12px;color:#8B6914">점심시간</div><div style="font-size:10px;color:#bbb">11:20~12:10</div></div></div>`;
     if(!state.activeMember){
       getPeriods().filter(pp=>!pp.br).forEach(pp=>{
-        const subj=state.tt[dw][pp.p]||"",color=SC[subj]||"#e0e0e0";
+        const subj=state.tt[dw][pp.p]||"",color=getSC()[subj]||"#e0e0e0";
         html+=`<div style="position:absolute;top:${minToY(toMin(pp.s))}px;left:0;right:0;height:${minToH(toMin(pp.s),toMin(pp.e))}px;background:${subj?color+'22':'#f9f9f9'};border-left:4px solid ${subj?color:'#e0e0e0'};border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1">
-          <span style="font-size:13px">${SE[subj]||'📚'}</span>
+          <span style="font-size:13px">${getSE()[subj]||'📚'}</span>
           <div><div style="font-weight:700;font-size:12px;color:${subj?'#333':'#ccc'}">${subj||pp.p+'교시'}</div><div style="font-size:10px;color:#bbb">${pp.s}~${pp.e}</div></div>
           <div style="margin-left:auto;margin-right:7px;font-size:10px;font-weight:800;color:${subj?color:'#ddd'}">${pp.p}교시</div>
         </div>`;
@@ -300,7 +358,7 @@ function renderTimetable(){
   </div><div>`;
   getPeriods().forEach(pp=>{
     if(pp.br){html+=`<div style="background:linear-gradient(90deg,#ffeaa7,#fdcb6e);border-radius:12px;padding:8px 14px;display:flex;align-items:center;gap:7px;font-size:12px;color:#8B6914;font-weight:600;margin-bottom:8px">🍱 점심시간 <span style="margin-left:auto;font-weight:400;font-size:11px">${pp.s} ~ ${pp.e}</span></div>`;return;}
-    const subj=state.tt[sd][pp.p]||"",color=SC[subj]||"#e9ecef";
+    const subj=state.tt[sd][pp.p]||"",color=getSC()[subj]||"#e9ecef";
     const isEd=state.editing&&state.editing.day===sd&&state.editing.period===pp.p;
     html+=`<div class="period-row" style="border-left:5px solid ${subj?color:'#e9ecef'}" ${!isEd?`onclick="setState({editing:{day:'${sd}',period:${pp.p}},editVal:'${subj}'})"`:''}>
       <div style="min-width:26px;text-align:center"><div style="font-weight:800;font-size:17px;color:#FF6B9D">${pp.p}</div><div style="font-size:9px;color:#bbb">교시</div></div>
@@ -308,7 +366,7 @@ function renderTimetable(){
     if(isEd){
       html+=`<div onclick="event.stopPropagation()">
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px">
-          ${Object.keys(SC).map(s=>`<button class="subj-btn" onclick="setState({editVal:'${s}'})" style="background:${state.editVal===s?SC[s]:'#f0f0f0'};color:${state.editVal===s?'#fff':'#555'}">${s}</button>`).join('')}
+          ${Object.keys(getSC()).map(s=>`<button class="subj-btn" onclick="setState({editVal:'${s}'})" style="background:${state.editVal===s?getSC()[s]:'#f0f0f0'};color:${state.editVal===s?'#fff':'#555'}">${getSE()[s]||'📚'} ${s}</button>`).join('')}
           <button class="subj-btn" onclick="setState({editVal:''})" style="background:${state.editVal===''?'#ccc':'#f0f0f0'}">비우기</button>
         </div>
         <div style="display:flex;gap:7px">
@@ -339,12 +397,50 @@ function renderTimetable(){
       html+=`<div style="font-size:10px;color:#bbb;margin-top:2px">${pp.s} ~ ${pp.e}</div>`;
     }
     html+=`</div>`;
-    if(!isEd&&subj)html+=`<div style="width:32px;height:32px;border-radius:10px;background:${color}33;display:flex;align-items:center;justify-content:center;font-size:16px">${SE[subj]||'📚'}</div>`;
+    if(!isEd&&subj)html+=`<div style="width:32px;height:32px;border-radius:10px;background:${color}33;display:flex;align-items:center;justify-content:center;font-size:16px">${getSE()[subj]||'📚'}</div>`;
     if(!pp.fixed&&!isEd)html+=`<button onclick="event.stopPropagation();deletePeriod(${pp.p})" style="background:none;border:none;cursor:pointer;color:#e0e0e0;font-size:16px;padding:0 4px;align-self:flex-start;margin-top:2px">✕</button>`;
     html+=`</div>`;
   });
   html+=`</div>
   <button onclick="addPeriod()" style="width:100%;padding:10px 0;border:2px dashed #ffd3e8;border-radius:12px;background:transparent;color:#FF6B9D;font-weight:700;font-size:13px;cursor:pointer;margin-top:4px">+ 교시 추가</button>
+
+  <!-- 과목 관리 -->
+  <div style="margin-top:12px">
+    <button onclick="setState({showSubjectMgr:!state.showSubjectMgr,editingSubject:null})" style="width:100%;padding:10px 0;border:2px dashed #c8e6ff;border-radius:12px;background:transparent;color:#4A90D9;font-weight:700;font-size:13px;cursor:pointer">
+      ${state.showSubjectMgr?'▲ 과목 관리 닫기':'🎨 과목 추가 / 이모티콘 변경'}
+    </button>
+    ${state.showSubjectMgr?`
+    <div style="margin-top:10px;background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.06)">
+      <div style="font-size:12px;font-weight:700;color:#666;margin-bottom:10px">등록된 과목</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px">
+        ${Object.keys(getSC()).map(s=>`
+        <div style="display:flex;align-items:center;gap:3px;background:${getSC()[s]}18;border:1.5px solid ${getSC()[s]};border-radius:10px;padding:4px 8px">
+          <span style="cursor:pointer;font-size:15px" onclick="setState({editingSubject:{name:'${s}',color:'${getSC()[s]}',emoji:'${getSE()[s]||'📚'}',isEdit:true}})">${getSE()[s]||'📚'}</span>
+          <span style="font-size:12px;font-weight:700;color:#333">${s}</span>
+          <button onclick="deleteSubject('${s}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:0 0 0 3px;line-height:1">✕</button>
+        </div>`).join('')}
+      </div>
+      ${state.editingSubject?`
+      <div style="background:#f9f9f9;border-radius:12px;padding:12px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:#aaa;margin-bottom:8px">${state.editingSubject.isEdit?'이모티콘 변경':'새 과목 추가'}</div>
+        ${!state.editingSubject.isEdit?`<input value="${state.editingSubject.name||''}" placeholder="과목명 입력" oninput="state.editingSubject={...state.editingSubject,name:this.value}" style="width:100%;padding:7px 10px;border-radius:9px;border:1.5px solid #ffd3e8;font-size:13px;outline:none;margin-bottom:8px">`:''}
+        <div style="font-size:11px;color:#aaa;font-weight:600;margin-bottom:6px">이모티콘 선택</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          ${EMOJI_LIST.map(em=>`<button onclick="${state.editingSubject.isEdit?`updateSubjectEmoji('${state.editingSubject.name}','${em}');setState({editingSubject:null})`:`state.editingSubject={...state.editingSubject,emoji:'${em}'};render()`}" style="width:34px;height:34px;border-radius:8px;border:2px solid ${state.editingSubject.emoji===em?'#FF6B9D':'#f0f0f0'};background:${state.editingSubject.emoji===em?'#fff0f5':'#f9f9f9'};cursor:pointer;font-size:16px">${em}</button>`).join('')}
+        </div>
+        <div style="font-size:11px;color:#aaa;font-weight:600;margin-bottom:6px">색상 선택</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          ${COLORS_LIST.map(c=>`<button onclick="${state.editingSubject.isEdit?`updateSubjectColor('${state.editingSubject.name}','${c}');setState({editingSubject:null})`:`state.editingSubject={...state.editingSubject,color:'${c}'};render()`}" style="width:28px;height:28px;border-radius:50%;background:${c};border:3px solid ${state.editingSubject.color===c?'#333':'transparent'};cursor:pointer"></button>`).join('')}
+        </div>
+        ${!state.editingSubject.isEdit?`<div style="display:flex;gap:8px">
+          <button onclick="addSubject()" style="flex:1;padding:8px 0;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(135deg,#FF6B9D,#FF9F43);color:#fff;font-weight:700;font-size:13px">추가</button>
+          <button onclick="setState({editingSubject:null})" style="flex:1;padding:8px 0;border-radius:10px;border:none;cursor:pointer;background:#f0f0f0;color:#888;font-weight:700;font-size:13px">취소</button>
+        </div>`:`<button onclick="setState({editingSubject:null})" style="width:100%;padding:8px 0;border-radius:10px;border:none;cursor:pointer;background:#f0f0f0;color:#888;font-weight:700;font-size:13px">닫기</button>`}
+      </div>`:`
+      <button onclick="setState({editingSubject:{name:'',color:'#b2bec3',emoji:'📚',isEdit:false}})" style="width:100%;padding:9px 0;border:2px dashed #ffd3e8;border-radius:11px;background:transparent;color:#FF6B9D;font-weight:700;font-size:13px;cursor:pointer">+ 새 과목 추가</button>`}
+    </div>`:''}
+  </div>
+
   <div style="margin-top:10px;background:#fff0f5;border-radius:12px;padding:9px 14px;font-size:11px;color:#FF6B9D;font-weight:600;text-align:center">💡 2교시 후 쉬는시간 10:30~10:40 · 점심 11:20~12:10</div></div>`;
   return html;
 }
