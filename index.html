@@ -56,9 +56,9 @@ input,textarea{outline:none;font-family:inherit}
 const DAYS=["월","화","수","목","금"];
 const DEFAULT_PERIODS=[
   {p:1,s:"09:00",e:"09:40",fixed:true},{p:2,s:"09:50",e:"10:30",fixed:true},
-  {p:3,s:"10:40",e:"11:20",fixed:true},{p:4,s:"11:30",e:"12:10",fixed:true},
-  {p:"점심",s:"12:10",e:"13:10",br:true,fixed:true},
-  {p:5,s:"13:10",e:"13:50",fixed:false},{p:6,s:"14:00",e:"14:40",fixed:false}
+  {p:3,s:"10:40",e:"11:20",fixed:true},
+  {p:"점심",s:"11:20",e:"12:10",br:true,fixed:true},
+  {p:4,s:"12:10",e:"12:50",fixed:false},{p:5,s:"13:00",e:"13:40",fixed:false},{p:6,s:"13:50",e:"14:30",fixed:false}
 ];
 const SC={국어:"#FF6B6B",수학:"#FF9F43",영어:"#FFC312",과학:"#26de81",사회:"#4bcffa",음악:"#a55eea",미술:"#fd9644",체육:"#45aaf2",도덕:"#fd79a8",창체:"#00b894"};
 const SE={국어:"📖",수학:"🔢",영어:"🔤",과학:"🔬",사회:"🌍",음악:"🎵",미술:"🎨",체육:"⚽",도덕:"💛",창체:"🌈"};
@@ -252,7 +252,7 @@ function renderDaily(){
 
   if(isWD){
     html+=`<div style="position:absolute;top:${minToY(toMin("10:30"))}px;height:${minToH(toMin("10:30"),toMin("10:40"))}px;left:0;right:0;background:#e3f6ff55;border-left:4px solid #74b9ff;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>☕</span><span style="font-weight:600;font-size:12px;color:#4A90D9">쉬는시간</span></div>`;
-    html+=`<div style="position:absolute;top:${minToY(toMin("12:10"))}px;height:${minToH(toMin("12:10"),toMin("13:10"))}px;left:0;right:0;background:#fffbe655;border-left:4px solid #fdcb6e;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>🍱</span><div><div style="font-weight:700;font-size:12px;color:#8B6914">점심시간</div><div style="font-size:10px;color:#bbb">12:10~13:10</div></div></div>`;
+    html+=`<div style="position:absolute;top:${minToY(toMin("11:20"))}px;height:${minToH(toMin("11:20"),toMin("12:10"))}px;left:0;right:0;background:#fffbe655;border-left:4px solid #fdcb6e;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>🍱</span><div><div style="font-weight:700;font-size:12px;color:#8B6914">점심시간</div><div style="font-size:10px;color:#bbb">11:20~12:10</div></div></div>`;
     if(!state.activeMember){
       getPeriods().filter(pp=>!pp.br).forEach(pp=>{
         const subj=state.tt[dw][pp.p]||"",color=SC[subj]||"#e0e0e0";
@@ -345,7 +345,7 @@ function renderTimetable(){
   });
   html+=`</div>
   <button onclick="addPeriod()" style="width:100%;padding:10px 0;border:2px dashed #ffd3e8;border-radius:12px;background:transparent;color:#FF6B9D;font-weight:700;font-size:13px;cursor:pointer;margin-top:4px">+ 교시 추가</button>
-  <div style="margin-top:10px;background:#fff0f5;border-radius:12px;padding:9px 14px;font-size:11px;color:#FF6B9D;font-weight:600;text-align:center">💡 2교시 후 쉬는시간 10:30~10:40 · 점심 12:10~13:10</div></div>`;
+  <div style="margin-top:10px;background:#fff0f5;border-radius:12px;padding:9px 14px;font-size:11px;color:#FF6B9D;font-weight:600;text-align:center">💡 2교시 후 쉬는시간 10:30~10:40 · 점심 11:20~12:10</div></div>`;
   return html;
 }
 
