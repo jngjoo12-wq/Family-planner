@@ -251,7 +251,7 @@ function renderDaily(){
   });
 
   if(isWD){
-    html+=`<div style="position:absolute;top:${minToY(toMin("10:30"))}px;height:${minToH(toMin("10:30"),toMin("10:40"))}px;left:0;right:0;background:#e3f6ff55;border-left:4px solid #74b9ff;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>☕</span><span style="font-weight:600;font-size:12px;color:#4A90D9">쉬는시간</span></div>`;
+    // 쉬는시간 데일리에서 숨김
     html+=`<div style="position:absolute;top:${minToY(toMin("11:20"))}px;height:${minToH(toMin("11:20"),toMin("12:10"))}px;left:0;right:0;background:#fffbe655;border-left:4px solid #fdcb6e;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>🍱</span><div><div style="font-weight:700;font-size:12px;color:#8B6914">점심시간</div><div style="font-size:10px;color:#bbb">11:20~12:10</div></div></div>`;
     if(!state.activeMember){
       getPeriods().filter(pp=>!pp.br).forEach(pp=>{
