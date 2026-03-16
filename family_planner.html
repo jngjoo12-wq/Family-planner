@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="가족 스케줄">
+<title>우리 가족 스케줄</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Noto Sans KR',sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:#FFF9FB;min-height:100vh}
+.app{max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:80px;background:#FFF9FB}
+.header{background:linear-gradient(135deg,#FF6B9D,#FF9F43);padding:20px 20px 14px;border-radius:0 0 24px 24px}
+.header-title{color:#fff;font-size:19px;font-weight:800}
+.header-sub{color:rgba(255,255,255,0.8);font-size:11px}
+.member-badge{background:rgba(255,255,255,0.25);border-radius:20px;padding:3px 10px;font-size:12px;color:#fff;font-weight:600}
+.tabs{display:flex;margin:14px 14px 0;background:#fff;border-radius:18px;padding:3px;box-shadow:0 2px 10px rgba(0,0,0,0.07)}
+.tab{flex:1;padding:9px 0;border:none;border-radius:14px;cursor:pointer;font-size:12px;font-weight:700;background:transparent;color:#aaa;transition:all 0.2s}
+.tab.active{background:linear-gradient(135deg,#FF6B9D,#FF9F43);color:#fff}
+.content{padding:14px}
+.card{background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:12px}
+.btn-primary{background:linear-gradient(135deg,#FF6B9D,#FF9F43);border:none;border-radius:10px;color:#fff;font-weight:700;cursor:pointer;padding:8px 14px;font-size:13px}
+.btn-ghost{background:#f0f0f0;border:none;border-radius:10px;color:#888;font-weight:700;cursor:pointer;padding:8px 14px;font-size:13px}
+.btn-dashed{width:100%;padding:10px 0;border:2px dashed #ffd3e8;border-radius:12px;background:transparent;color:#FF6B9D;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:12px}
+input,textarea{outline:none;font-family:inherit}
+.time-input{padding:7px 9px;border-radius:9px;border:1.5px solid #ffd3e8;font-size:12px;width:95px}
+.text-input{padding:7px 9px;border-radius:9px;border:1.5px solid #ffd3e8;font-size:12px;flex:1}
+.textarea{padding:7px 9px;border-radius:9px;border:1.5px solid #ffd3e8;font-size:12px;width:100%;resize:none}
+.member-btn{flex:1;padding:6px 0;border:none;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.15s}
+.alert-btn{padding:4px 10px;border-radius:9px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#f0f0f0;color:#888}
+.alert-btn.sel{background:linear-gradient(135deg,#FF6B9D,#FF9F43);color:#fff}
+.day-btn{flex:1;padding:7px 0;border:none;border-radius:12px;cursor:pointer;font-weight:700;font-size:14px;background:#fff;color:#aaa;box-shadow:0 1px 5px rgba(0,0,0,0.06)}
+.day-btn.active{background:linear-gradient(135deg,#FF6B9D,#FF9F43);color:#fff;box-shadow:0 3px 10px rgba(255,107,157,0.35)}
+.period-row{background:#fff;border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06);cursor:pointer;margin-bottom:8px}
+.nav-btn{background:#ffeef5;border:none;border-radius:9px;padding:5px 12px;cursor:pointer;font-size:16px;color:#FF6B9D;font-weight:700}
+.cal-cell{text-align:center;padding:5px 2px;border-radius:10px;cursor:pointer;font-size:13px;position:relative}
+.ev-card{display:flex;align-items:flex-start;gap:9px;border-radius:12px;padding:9px 12px;cursor:pointer;margin-bottom:8px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;max-width:430px;max-height:80vh;overflow-y:auto}
+.info-row{display:flex;align-items:center;gap:10px;background:#f9f9f9;border-radius:10px;padding:9px 12px;margin-bottom:8px}
+.subj-btn{padding:4px 9px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#f0f0f0;color:#555}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+const DAYS=["월","화","수","목","금"];
+const PERIODS=[
+  {p:1,s:"09:00",e:"09:40"},{p:2,s:"09:50",e:"10:30"},
+  {p:3,s:"10:50",e:"11:30"},{p:4,s:"11:40",e:"12:20"},
+  {p:"점심",s:"12:20",e:"13:10",br:true},
+  {p:5,s:"13:10",e:"13:50"},{p:6,s:"14:00",e:"14:40"}
+];
+const SC={국어:"#FF6B6B",수학:"#FF9F43",영어:"#FFC312",과학:"#26de81",사회:"#4bcffa",음악:"#a55eea",미술:"#fd9644",체육:"#45aaf2",도덕:"#fd79a8",창체:"#00b894"};
+const SE={국어:"📖",수학:"🔢",영어:"🔤",과학:"🔬",사회:"🌍",음악:"🎵",미술:"🎨",체육:"⚽",도덕:"💛",창체:"🌈"};
+const MEMBERS=[{id:"mom",n:"엄마",e:"👩",c:"#FF6B9D"},{id:"dad",n:"아빠",e:"👨",c:"#4A90D9"},{id:"kid",n:"자녀",e:"🧒",c:"#F7B731"}];
+const AO=[{l:"없음",v:null},{l:"정시",v:0},{l:"5분 전",v:5},{l:"10분 전",v:10},{l:"30분 전",v:30},{l:"1시간 전",v:60}];
+const DOW=["일","월","화","수","목","금","토"];
+const toMin=t=>{const[h,m]=t.split(":").map(Number);return h*60+m};
+const DS=7*60,DE=22*60,DT=DE-DS,TH=680;
+const minToY=m=>((m-DS)/DT)*TH;
+const minToH=(s,e)=>Math.max(((e-s)/DT)*TH,22);
+const todayStr=()=>new Date().toISOString().slice(0,10);
+const dow=ds=>DOW[new Date(ds).getDay()];
+const fmt=ds=>ds.replace(/-/g,".");
+
+let state={
+  tab:"daily",
+  tt:(()=>{const t={};DAYS.forEach(d=>{t[d]={};PERIODS.forEach(p=>{if(!p.br)t[d][p.p]=""})});return t})(),
+  events:(()=>{const e={};const n=new Date();for(let i=-10;i<60;i++){const d=new Date(n);d.setDate(n.getDate()+i);e[d.toISOString().slice(0,10)]=[]}return e})(),
+  selDate:todayStr(),
+  calMonth:{year:new Date().getFullYear(),month:new Date().getMonth()},
+  editing:null,editVal:"",
+  selDay:"월",
+  showAdd:false,
+  newEv:{time:"09:00",title:"",member:"mom",alert:null,memo:""},
+  detail:null,
+  editingEv:null
+};
+
+const M=id=>MEMBERS.find(m=>m.id===id);
+function setState(patch){Object.assign(state,patch);render()}
+function addEvent(){
+  if(!state.newEv.title.trim())return;
+  const ev={...state.newEv,id:Date.now()};
+  const evs={...state.events};
+  evs[state.selDate]=[...(evs[state.selDate]||[]),ev];
+  setState({events:evs,newEv:{time:"09:00",title:"",member:"mom",alert:null,memo:""},showAdd:false});
+}
+function delEvent(id){
+  const evs={...state.events};
+  evs[state.selDate]=evs[state.selDate].filter(e=>e.id!==id);
+  setState({events:evs,detail:null});
+}
+function saveEdit(){
+  if(!state.editingEv)return;
+  const evs={...state.events};
+  evs[state.selDate]=evs[state.selDate].map(e=>e.id===state.editingEv.id?state.editingEv:e);
+  setState({events:evs,detail:state.editingEv,editingEv:null});
+}
+function moveDate(dir){
+  const d=new Date(state.selDate);d.setDate(d.getDate()+dir);
+  setState({selDate:d.toISOString().slice(0,10)});
+}
+function savePeriod(){
+  const{editing,editVal}=state;
+  if(!editing)return;
+  const tt=JSON.parse(JSON.stringify(state.tt));
+  tt[editing.day][editing.period]=editVal;
+  setState({tt,editing:null,editVal:""});
+}
+
+function evForm(val,onChange,onSave,onCancel,saveLabel){
+  saveLabel=saveLabel||"저장";
+  const ref=onChange==='new'?'newEv':'editingEv';
+  return `<div style="background:#fff9fb;border-radius:14px;padding:14px;border:1.5px solid #ffd3e8;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:8px">
+      <input class="time-input" type="time" value="${val.time}" onchange="state.${ref}={...state.${ref},time:this.value}">
+      <input class="text-input" placeholder="일정 제목" value="${val.title}" oninput="state.${ref}={...state.${ref},title:this.value}" onkeydown="if(event.key==='Enter')${onSave}()">
+    </div>
+    <div style="display:flex;gap:6px">
+      ${MEMBERS.map(m=>`<button class="member-btn" onclick="state.${ref}={...state.${ref},member:'${m.id}'};render()" style="background:${val.member===m.id?m.c:'#f0f0f0'};color:${val.member===m.id?'#fff':'#888'}">${m.e} ${m.n}</button>`).join('')}
+    </div>
+    <div>
+      <div style="font-size:11px;color:#aaa;font-weight:700;margin-bottom:6px">🔔 알림</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${AO.map(o=>`<button class="alert-btn ${val.alert===o.v?'sel':''}" onclick="state.${ref}={...state.${ref},alert:${o.v===null?'null':o.v}};render()">${o.l}</button>`).join('')}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#aaa;font-weight:700;margin-bottom:6px">📝 메모</div>
+      <textarea class="textarea" rows="3" placeholder="메모를 입력하세요..." oninput="state.${ref}={...state.${ref},memo:this.value}">${val.memo}</textarea>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" style="flex:1" onclick="${onSave}()">${saveLabel}</button>
+      <button class="btn-ghost" style="flex:1" onclick="${onCancel}()">취소</button>
+    </div>
+  </div>`;
+}
+
+function renderDaily(){
+  const d=state.selDate,dw=dow(d),isWD=DAYS.includes(dw);
+  const evList=(state.events[d]||[]).sort((a,b)=>a.time.localeCompare(b.time));
+  const hours=Array.from({length:DE/60-DS/60},(_,i)=>DS/60+i);
+  const isToday=d===todayStr();
+  const now=new Date(),nm=now.getHours()*60+now.getMinutes();
+  let html=`<div style="padding:0 14px 14px">
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+      <button class="nav-btn" onclick="moveDate(-1)">‹</button>
+      <div style="text-align:center">
+        <div style="font-weight:800;font-size:15px;color:#333">${fmt(d)}</div>
+        <div style="font-size:12px;color:${dw==='일'?'#FF6B6B':dw==='토'?'#4A90D9':'#FF6B9D'};font-weight:700">${dw}요일${isToday?' · 오늘':''}</div>
+      </div>
+      <button class="nav-btn" onclick="moveDate(1)">›</button>
+    </div>`;
+  if(!state.showAdd){
+    html+=`<button class="btn-dashed" onclick="setState({showAdd:true})">+ 일정 추가</button>`;
+  }else{
+    html+=`<div style="margin-bottom:12px">${evForm(state.newEv,'new','addEvent','()=>setState({showAdd:false,newEv:{time:"09:00",title:"",member:"mom",alert:null,memo:""}})')}</div>`;
+  }
+  html+=`<div style="position:relative;height:${TH+40}px;margin-left:42px">`;
+  hours.forEach(h=>{
+    html+=`<div style="position:absolute;top:${minToY(h*60)}px;left:0;right:0;display:flex;align-items:center;pointer-events:none">
+      <div style="position:absolute;left:-42px;width:34px;text-align:right;font-size:10px;color:#ccc;font-weight:600;margin-top:-6px">${String(h).padStart(2,"0")}:00</div>
+      <div style="height:1px;background:#f0f0f0;width:100%"></div>
+    </div>`;
+  });
+  if(isWD){
+    html+=`<div style="position:absolute;top:${minToY(toMin("10:30"))}px;height:${minToH(toMin("10:30"),toMin("10:50"))}px;left:0;right:0;background:#e3f6ff55;border-left:4px solid #74b9ff;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>☕</span><span style="font-weight:600;font-size:12px;color:#4A90D9">쉬는시간</span></div>`;
+    html+=`<div style="position:absolute;top:${minToY(toMin("12:20"))}px;height:${minToH(toMin("12:20"),toMin("13:10"))}px;left:0;right:0;background:#fffbe655;border-left:4px solid #fdcb6e;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>🍱</span><div><div style="font-weight:700;font-size:12px;color:#8B6914">점심시간</div><div style="font-size:10px;color:#bbb">12:20~13:10</div></div></div>`;
+    PERIODS.filter(pp=>!pp.br).forEach(pp=>{
+      const subj=state.tt[dw][pp.p]||"",color=SC[subj]||"#e0e0e0";
+      html+=`<div style="position:absolute;top:${minToY(toMin(pp.s))}px;left:0;right:0;height:${minToH(toMin(pp.s),toMin(pp.e))}px;background:${subj?color+'22':'#f9f9f9'};border-left:4px solid ${subj?color:'#e0e0e0'};border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1">
+        <span style="font-size:13px">${SE[subj]||'📚'}</span>
+        <div><div style="font-weight:700;font-size:12px;color:${subj?'#333':'#ccc'}">${subj||pp.p+'교시'}</div><div style="font-size:10px;color:#bbb">${pp.s}~${pp.e}</div></div>
+        <div style="margin-left:auto;margin-right:7px;font-size:10px;font-weight:800;color:${subj?color:'#ddd'}">${pp.p}교시</div>
+      </div>`;
+    });
+  }
+  evList.forEach((ev,idx)=>{
+    const mb=M(ev.member),top=minToY(toMin(ev.time)),lo=(idx%2)*12;
+    html+=`<div onclick="setState({detail:JSON.parse(JSON.stringify(state.events['${d}'].find(e=>e.id===${ev.id})))})" style="position:absolute;top:${top-2}px;left:${lo}px;right:${-lo}px;height:${ev.memo?62:50}px;background:${mb.c}22;border:2px solid ${mb.c};border-radius:10px;display:flex;align-items:center;padding-left:9px;gap:7px;z-index:${10+idx};cursor:pointer">
+      <span style="font-size:16px">${mb.e}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-weight:700;font-size:12px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px">${ev.title}</span>
+          ${ev.alert!==null&&ev.alert!==undefined?'<span style="font-size:11px">🔔</span>':''}
+          ${ev.memo?'<span style="font-size:11px">📝</span>':''}
+        </div>
+        <div style="font-size:10px;color:${mb.c};font-weight:600">${ev.time} · ${mb.n}</div>
+        ${ev.memo?`<div style="font-size:10px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px">${ev.memo}</div>`:''}
+      </div>
+    </div>`;
+  });
+  if(isToday&&nm>=DS&&nm<=DE){
+    html+=`<div style="position:absolute;top:${minToY(nm)}px;left:-42px;right:0;z-index:20;pointer-events:none;display:flex;align-items:center">
+      <div style="font-size:10px;color:#FF6B9D;font-weight:800;width:34px;text-align:right">${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}</div>
+      <div style="width:7px;height:7px;border-radius:50%;background:#FF6B9D;margin-left:3px;flex-shrink:0"></div>
+      <div style="flex:1;height:2px;background:linear-gradient(90deg,#FF6B9D,#FF9F43)"></div>
+    </div>`;
+  }
+  html+=`</div></div>`;
+  return html;
+}
+
+function renderTimetable(){
+  const sd=state.selDay;
+  let html=`<div class="content"><div style="display:flex;gap:6px;margin-bottom:14px">
+    ${DAYS.map(d=>`<button class="day-btn ${sd===d?'active':''}" onclick="setState({selDay:'${d}'})">${d}</button>`).join('')}
+  </div><div>`;
+  PERIODS.forEach(pp=>{
+    if(pp.br){html+=`<div style="background:linear-gradient(90deg,#ffeaa7,#fdcb6e);border-radius:12px;padding:8px 14px;display:flex;align-items:center;gap:7px;font-size:12px;color:#8B6914;font-weight:600;margin-bottom:8px">🍱 점심시간 <span style="margin-left:auto;font-weight:400;font-size:11px">${pp.s} ~ ${pp.e}</span></div>`;return;}
+    const subj=state.tt[sd][pp.p]||"",color=SC[subj]||"#e9ecef";
+    const isEd=state.editing&&state.editing.day===sd&&state.editing.period===pp.p;
+    html+=`<div class="period-row" style="border-left:5px solid ${subj?color:'#e9ecef'}" ${!isEd?`onclick="setState({editing:{day:'${sd}',period:${pp.p}},editVal:'${subj}'})"`:''}>
+      <div style="min-width:26px;text-align:center"><div style="font-weight:800;font-size:17px;color:#FF6B9D">${pp.p}</div><div style="font-size:9px;color:#bbb">교시</div></div>
+      <div style="flex:1">`;
+    if(isEd){
+      html+=`<div onclick="event.stopPropagation()">
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px">
+          ${Object.keys(SC).map(s=>`<button class="subj-btn" onclick="setState({editVal:'${s}'})" style="background:${state.editVal===s?SC[s]:'#f0f0f0'};color:${state.editVal===s?'#fff':'#555'}">${s}</button>`).join('')}
+          <button class="subj-btn" onclick="setState({editVal:''})" style="background:${state.editVal===''?'#ccc':'#f0f0f0'}">비우기</button>
+        </div>
+        <div style="display:flex;gap:7px">
+          <input class="text-input" value="${state.editVal}" oninput="state.editVal=this.value" placeholder="직접 입력...">
+          <button class="btn-primary" onclick="savePeriod()">확인</button>
+        </div>
+      </div>`;
+    }else{
+      html+=`<div style="font-weight:700;font-size:15px;color:${subj?'#333':'#ccc'}">${subj||'탭해서 과목 입력'}</div>`;
+    }
+    html+=`<div style="font-size:10px;color:#bbb;margin-top:2px">${pp.s} ~ ${pp.e}</div></div>`;
+    if(!isEd&&subj)html+=`<div style="width:32px;height:32px;border-radius:10px;background:${color}33;display:flex;align-items:center;justify-content:center;font-size:16px">${SE[subj]||'📚'}</div>`;
+    html+=`</div>`;
+  });
+  html+=`</div><div style="margin-top:14px;background:#fff0f5;border-radius:12px;padding:9px 14px;font-size:11px;color:#FF6B9D;font-weight:600;text-align:center">💡 2교시 후 쉬는시간 10:30~10:50 · 점심 12:20~13:10</div></div>`;
+  return html;
+}
+
+function renderCalendar(){
+  const{year,month}=state.calMonth;
+  const days=new Date(year,month+1,0).getDate(),fd=new Date(year,month,1).getDay();
+  const d=state.selDate,evList=(state.events[d]||[]).sort((a,b)=>a.time.localeCompare(b.time));
+  let calH=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <button class="nav-btn" onclick="setState({calMonth:{year:${month===0?year-1:year},month:${month===0?11:month-1}}})">‹</button>
+    <div style="font-weight:800;font-size:15px;color:#333">${year}년 ${month+1}월</div>
+    <button class="nav-btn" onclick="setState({calMonth:{year:${month===11?year+1:year},month:${month===11?0:month+1}}})">›</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">
+    ${["일","월","화","수","목","금","토"].map(dd=>`<div style="text-align:center;font-weight:700;font-size:11px;color:${dd==="일"?"#FF6B6B":dd==="토"?"#4A90D9":"#888"};padding:3px 0">${dd}</div>`).join('')}`;
+  for(let i=0;i<fd;i++)calH+=`<div></div>`;
+  for(let dd=1;dd<=days;dd++){
+    const key=`${year}-${String(month+1).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
+    const hasEv=(state.events[key]||[]).length>0,hasAl=(state.events[key]||[]).some(e=>e.alert!==null&&e.alert!==undefined);
+    const isSel=key===d,isTod=key===todayStr(),dw2=(fd+dd-1)%7;
+    calH+=`<div class="cal-cell" onclick="setState({selDate:'${key}'})" style="background:${isSel?'#FF6B9D':isTod?'#fff0f5':'transparent'};color:${isSel?'#fff':dw2===0?'#FF6B6B':dw2===6?'#4A90D9':'#333'};font-weight:${isTod||isSel?700:400}">
+      ${dd}
+      <div style="display:flex;justify-content:center;gap:2px;margin-top:1px">
+        ${hasEv?`<div style="width:4px;height:4px;border-radius:50%;background:${isSel?'#fff':'#FF6B9D'}"></div>`:''}
+        ${hasAl?`<div style="width:4px;height:4px;border-radius:50%;background:${isSel?'#fff':'#F7B731'}"></div>`:''}
+      </div>
+    </div>`;
+  }
+  calH+=`</div></div><div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
+    <div style="font-weight:800;font-size:14px;color:#333">📋 ${fmt(d)} 일정</div>
+    <button class="btn-primary" onclick="setState({showAdd:true})">+ 추가</button>
+  </div>`;
+  if(state.showAdd&&state.tab==='calendar'){
+    calH+=`<div style="margin-bottom:10px">${evForm(state.newEv,'new','addEvent','()=>setState({showAdd:false,newEv:{time:"09:00",title:"",member:"mom",alert:null,memo:""}})')}</div>`;
+  }
+  if(evList.length===0){calH+=`<div style="text-align:center;color:#ccc;font-size:13px;padding:16px 0">😊 등록된 일정이 없어요</div>`;}
+  else{evList.forEach(ev=>{const mb=M(ev.member);calH+=`<div class="ev-card" onclick="setState({detail:JSON.parse(JSON.stringify(state.events['${d}'].find(e=>e.id===${ev.id})))})" style="background:${mb.c}15;border-left:4px solid ${mb.c}">
+    <div style="font-weight:800;color:${mb.c};font-size:12px;min-width:38px;padding-top:2px">${ev.time}</div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+        <span style="font-weight:700;font-size:13px;color:#333">${ev.title}</span>
+        ${ev.alert!==null&&ev.alert!==undefined?`<span style="background:#fff3cd;border-radius:7px;padding:1px 6px;font-size:10px;color:#d48806;font-weight:700">🔔 ${AO.find(o=>o.v===ev.alert)?.l}</span>`:''}
+      </div>
+      <div style="font-size:10px;color:#aaa;margin-top:2px">${mb.e} ${mb.n}</div>
+      ${ev.memo?`<div style="margin-top:4px;font-size:11px;color:#888;background:#fff;border-radius:7px;padding:4px 7px;border-left:2px solid #ffd3e8">${ev.memo.length>50?ev.memo.slice(0,50)+'…':ev.memo}</div>`:''}
+    </div>
+    <button onclick="event.stopPropagation();delEvent(${ev.id})" style="background:none;border:none;cursor:pointer;color:#e0e0e0;font-size:13px;align-self:flex-start">✕</button>
+  </div>`;});}
+  calH+=`</div>`;
+  return `<div class="content">${calH}</div>`;
+}
+
+function renderModal(){
+  if(!state.detail)return'';
+  const ev=state.detail,mb=M(ev.member),d=state.selDate;
+  let html=`<div class="overlay" onclick="if(event.target===this)setState({detail:null,editingEv:null})"><div class="modal">`;
+  if(state.editingEv){
+    html+=`<div style="font-weight:800;font-size:15px;color:#333;margin-bottom:12px">✏️ 일정 수정</div>`;
+    html+=evForm(state.editingEv,'edit','saveEdit','()=>setState({editingEv:null})','수정 저장');
+  }else{
+    html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-weight:800;font-size:16px;color:#333">${ev.title}</div>
+      <button class="btn-ghost" onclick="setState({detail:null})">닫기</button>
+    </div>
+    <div class="info-row"><span style="font-size:16px">🕐</span><div><div style="font-size:10px;color:#aaa;font-weight:600">시간</div><div style="font-weight:700;font-size:13px;color:#333">${fmt(d)} ${ev.time}</div></div></div>
+    <div class="info-row"><span style="font-size:16px">${mb.e}</span><div><div style="font-size:10px;color:#aaa;font-weight:600">담당</div><div style="font-weight:700;font-size:13px;color:${mb.c}">${mb.n}</div></div></div>
+    <div class="info-row" style="background:${ev.alert!==null&&ev.alert!==undefined?'#fff8e1':'#f9f9f9'}">
+      <span style="font-size:16px">🔔</span>
+      <div><div style="font-size:10px;color:#aaa;font-weight:600">알림</div>
+      <div style="font-weight:700;font-size:13px;color:${ev.alert!==null&&ev.alert!==undefined?'#d48806':'#ccc'}">${ev.alert!==null&&ev.alert!==undefined?AO.find(o=>o.v===ev.alert)?.l:'없음'}</div></div>
+    </div>
+    ${ev.memo?`<div style="background:#fff0f5;border-radius:10px;padding:11px 12px;margin-bottom:8px"><div style="font-size:10px;color:#FF6B9D;font-weight:700;margin-bottom:5px">📝 메모</div><div style="font-size:13px;color:#444;white-space:pre-wrap;line-height:1.6">${ev.memo}</div></div>`:`<div class="info-row" style="color:#ccc;font-size:12px">📝 메모 없음</div>`}
+    <button class="btn-primary" style="width:100%;padding:11px 0;font-size:14px;border-radius:12px;margin-top:4px" onclick="setState({editingEv:JSON.parse(JSON.stringify(state.detail))})">✏️ 수정하기</button>`;
+  }
+  html+=`</div></div>`;
+  return html;
+}
+
+function render(){
+  document.getElementById('app').innerHTML=`
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+      <span style="font-size:24px">🏠</span>
+      <div><div class="header-title">우리 가족 스케줄</div><div class="header-sub">Family Planner</div></div>
+    </div>
+    <div style="display:flex;gap:7px">${MEMBERS.map(m=>`<div class="member-badge">${m.e} ${m.n}</div>`).join('')}</div>
+  </div>
+  <div class="tabs">
+    ${[{id:"daily",l:"🗓 데일리"},{id:"timetable",l:"📚 시간표"},{id:"calendar",l:"📅 캘린더"}].map(t=>`<button class="tab ${state.tab===t.id?'active':''}" onclick="setState({tab:'${t.id}'})">${t.l}</button>`).join('')}
+  </div>
+  ${state.tab==="daily"?renderDaily():state.tab==="timetable"?renderTimetable():renderCalendar()}
+  ${renderModal()}`;
+}
+
+render();
+</script>
+</body>
+</html>
