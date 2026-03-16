@@ -15,7 +15,9 @@ body{background:#FFF9FB;min-height:100vh}
 .header{background:linear-gradient(135deg,#FF6B9D,#FF9F43);padding:20px 20px 14px;border-radius:0 0 24px 24px}
 .header-title{color:#fff;font-size:19px;font-weight:800}
 .header-sub{color:rgba(255,255,255,0.8);font-size:11px}
-.member-badge{background:rgba(255,255,255,0.25);border-radius:20px;padding:3px 10px;font-size:12px;color:#fff;font-weight:600}
+.member-badge{border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid transparent;transition:all 0.2s}
+.member-badge.active{background:#fff;border-color:#fff}
+.member-badge.inactive{background:rgba(255,255,255,0.2);color:rgba(255,255,255,0.8);border-color:transparent}
 .tabs{display:flex;margin:14px 14px 0;background:#fff;border-radius:18px;padding:3px;box-shadow:0 2px 10px rgba(0,0,0,0.07)}
 .tab{flex:1;padding:9px 0;border:none;border-radius:14px;cursor:pointer;font-size:12px;font-weight:700;background:transparent;color:#aaa;transition:all 0.2s}
 .tab.active{background:linear-gradient(135deg,#FF6B9D,#FF9F43);color:#fff}
@@ -23,6 +25,7 @@ body{background:#FFF9FB;min-height:100vh}
 .card{background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:12px}
 .btn-primary{background:linear-gradient(135deg,#FF6B9D,#FF9F43);border:none;border-radius:10px;color:#fff;font-weight:700;cursor:pointer;padding:8px 14px;font-size:13px}
 .btn-ghost{background:#f0f0f0;border:none;border-radius:10px;color:#888;font-weight:700;cursor:pointer;padding:8px 14px;font-size:13px}
+.btn-danger{background:#fff0f0;border:none;border-radius:10px;color:#e74c3c;font-weight:700;cursor:pointer;padding:8px 14px;font-size:13px}
 .btn-dashed{width:100%;padding:10px 0;border:2px dashed #ffd3e8;border-radius:12px;background:transparent;color:#FF6B9D;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:12px}
 input,textarea{outline:none;font-family:inherit}
 .time-input{padding:7px 9px;border-radius:9px;border:1.5px solid #ffd3e8;font-size:12px;width:95px}
@@ -41,17 +44,21 @@ input,textarea{outline:none;font-family:inherit}
 .modal{background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;max-width:430px;max-height:80vh;overflow-y:auto}
 .info-row{display:flex;align-items:center;gap:10px;background:#f9f9f9;border-radius:10px;padding:9px 12px;margin-bottom:8px}
 .subj-btn{padding:4px 9px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#f0f0f0;color:#555}
+.filter-bar{display:flex;gap:8px;padding:10px 14px 0}
+.filter-chip{padding:5px 14px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;transition:all 0.2s}
+.empty-state{text-align:center;padding:40px 20px;color:#ccc}
+.empty-state .emoji{font-size:40px;margin-bottom:10px}
 </style>
 </head>
 <body>
 <div class="app" id="app"></div>
 <script>
 const DAYS=["월","화","수","목","금"];
-const PERIODS=[
-  {p:1,s:"09:00",e:"09:40"},{p:2,s:"09:50",e:"10:30"},
-  {p:3,s:"10:50",e:"11:30"},{p:4,s:"11:40",e:"12:20"},
-  {p:"점심",s:"12:20",e:"13:10",br:true},
-  {p:5,s:"13:10",e:"13:50"},{p:6,s:"14:00",e:"14:40"}
+const DEFAULT_PERIODS=[
+  {p:1,s:"09:00",e:"09:40",fixed:true},{p:2,s:"09:50",e:"10:30",fixed:true},
+  {p:3,s:"10:40",e:"11:20",fixed:true},{p:4,s:"11:30",e:"12:10",fixed:true},
+  {p:"점심",s:"12:10",e:"13:10",br:true,fixed:true},
+  {p:5,s:"13:10",e:"13:50",fixed:false},{p:6,s:"14:00",e:"14:40",fixed:false}
 ];
 const SC={국어:"#FF6B6B",수학:"#FF9F43",영어:"#FFC312",과학:"#26de81",사회:"#4bcffa",음악:"#a55eea",미술:"#fd9644",체육:"#45aaf2",도덕:"#fd79a8",창체:"#00b894"};
 const SE={국어:"📖",수학:"🔢",영어:"🔤",과학:"🔬",사회:"🌍",음악:"🎵",미술:"🎨",체육:"⚽",도덕:"💛",창체:"🌈"};
@@ -68,7 +75,8 @@ const fmt=ds=>ds.replace(/-/g,".");
 
 let state={
   tab:"daily",
-  tt:(()=>{const t={};DAYS.forEach(d=>{t[d]={};PERIODS.forEach(p=>{if(!p.br)t[d][p.p]=""})});return t})(),
+  periods:JSON.parse(JSON.stringify(DEFAULT_PERIODS)),
+  tt:(()=>{const t={};DAYS.forEach(d=>{t[d]={};DEFAULT_PERIODS.forEach(p=>{if(!p.br)t[d][p.p]=""})});return t})(),
   events:(()=>{const e={};const n=new Date();for(let i=-10;i<60;i++){const d=new Date(n);d.setDate(n.getDate()+i);e[d.toISOString().slice(0,10)]=[]}return e})(),
   selDate:todayStr(),
   calMonth:{year:new Date().getFullYear(),month:new Date().getMonth()},
@@ -77,22 +85,57 @@ let state={
   showAdd:false,
   newEv:{time:"09:00",title:"",member:"mom",alert:null,memo:""},
   detail:null,
-  editingEv:null
+  editingEv:null,
+  activeMember:null,
+  confirmDelete:null,
+  editingTime:null
 };
 
 const M=id=>MEMBERS.find(m=>m.id===id);
+const getPeriods=()=>state.periods||DEFAULT_PERIODS;
+
+function saveTime(){
+  if(!state.editingTime)return;
+  const periods=JSON.parse(JSON.stringify(state.periods));
+  const idx=periods.findIndex(p=>p.p===state.editingTime.p);
+  if(idx>=0){periods[idx].s=state.editingTime.s;periods[idx].e=state.editingTime.e;}
+  setState({periods,editingTime:null});
+}
+
+function addPeriod(){
+  const periods=JSON.parse(JSON.stringify(state.periods));
+  const lastP=periods.filter(p=>!p.br&&typeof p.p==='number').map(p=>p.p);
+  const nextNum=Math.max(...lastP)+1;
+  const last=periods.filter(p=>!p.br).slice(-1)[0];
+  const lastEnd=last?last.e:"14:40";
+  const [lh,lm]=lastEnd.split(":").map(Number);
+  const startMin=lh*60+lm+10;
+  const endMin=startMin+40;
+  const toT=m=>`${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
+  periods.push({p:nextNum,s:toT(startMin),e:toT(endMin),fixed:false});
+  const tt=JSON.parse(JSON.stringify(state.tt));
+  Object.keys(tt).forEach(d=>{tt[d][nextNum]="";});
+  setState({periods,tt});
+}
+function deletePeriod(pNum){
+  const periods=JSON.parse(JSON.stringify(state.periods)).filter(p=>p.p!==pNum);
+  const tt=JSON.parse(JSON.stringify(state.tt));
+  Object.keys(tt).forEach(d=>{delete tt[d][pNum];});
+  setState({periods,tt,editing:null});
+}
 function setState(patch){Object.assign(state,patch);render()}
+
 function addEvent(){
   if(!state.newEv.title.trim())return;
   const ev={...state.newEv,id:Date.now()};
   const evs={...state.events};
   evs[state.selDate]=[...(evs[state.selDate]||[]),ev];
-  setState({events:evs,newEv:{time:"09:00",title:"",member:"mom",alert:null,memo:""},showAdd:false});
+  setState({events:evs,newEv:{time:"09:00",title:"",member:state.activeMember||"mom",alert:null,memo:""},showAdd:false});
 }
 function delEvent(id){
   const evs={...state.events};
   evs[state.selDate]=evs[state.selDate].filter(e=>e.id!==id);
-  setState({events:evs,detail:null});
+  setState({events:evs,detail:null,editingEv:null});
 }
 function saveEdit(){
   if(!state.editingEv)return;
@@ -110,6 +153,16 @@ function savePeriod(){
   const tt=JSON.parse(JSON.stringify(state.tt));
   tt[editing.day][editing.period]=editVal;
   setState({tt,editing:null,editVal:""});
+}
+function toggleMember(id){
+  setState({activeMember: state.activeMember===id ? null : id});
+}
+
+// 현재 필터 적용된 이벤트 목록
+function filteredEvents(dateKey){
+  const evs=state.events[dateKey]||[];
+  if(!state.activeMember) return evs;
+  return evs.filter(e=>e.member===state.activeMember);
 }
 
 function evForm(val,onChange,onSave,onCancel,saveLabel){
@@ -140,12 +193,39 @@ function evForm(val,onChange,onSave,onCancel,saveLabel){
   </div>`;
 }
 
+function renderHeader(){
+  return `<div class="header">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+      <span style="font-size:24px">🏠</span>
+      <div><div class="header-title">우리 가족 스케줄</div><div class="header-sub">Family Planner</div></div>
+    </div>
+    <div style="display:flex;gap:7px">
+      ${MEMBERS.map(m=>{
+        const isActive=state.activeMember===m.id;
+        return `<button class="member-badge ${isActive?'active':'inactive'}" onclick="toggleMember('${m.id}')" style="color:${isActive?m.c:'rgba(255,255,255,0.9)'}">${m.e} ${m.n}</button>`;
+      }).join('')}
+      ${state.activeMember?`<button onclick="setState({activeMember:null})" style="background:rgba(255,255,255,0.15);border:none;border-radius:20px;padding:5px 10px;color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;cursor:pointer">전체</button>`:''}
+    </div>
+  </div>`;
+}
+
+function renderFilterBanner(){
+  if(!state.activeMember) return '';
+  const mb=M(state.activeMember);
+  return `<div style="margin:10px 14px 0;background:${mb.c}18;border-radius:12px;padding:8px 14px;display:flex;align-items:center;justify-content:space-between">
+    <div style="font-size:13px;font-weight:700;color:${mb.c}">${mb.e} ${mb.n} 일정만 보기</div>
+    <button onclick="setState({activeMember:null})" style="background:none;border:none;color:${mb.c};font-size:12px;font-weight:700;cursor:pointer">전체 보기</button>
+  </div>`;
+}
+
 function renderDaily(){
   const d=state.selDate,dw=dow(d),isWD=DAYS.includes(dw);
-  const evList=(state.events[d]||[]).sort((a,b)=>a.time.localeCompare(b.time));
+  const evList=filteredEvents(d).sort((a,b)=>a.time.localeCompare(b.time));
+  const allEvList=(state.events[d]||[]).sort((a,b)=>a.time.localeCompare(b.time));
   const hours=Array.from({length:DE/60-DS/60},(_,i)=>DS/60+i);
   const isToday=d===todayStr();
   const now=new Date(),nm=now.getHours()*60+now.getMinutes();
+
   let html=`<div style="padding:0 14px 14px">
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
       <button class="nav-btn" onclick="moveDate(-1)">‹</button>
@@ -155,11 +235,13 @@ function renderDaily(){
       </div>
       <button class="nav-btn" onclick="moveDate(1)">›</button>
     </div>`;
+
   if(!state.showAdd){
-    html+=`<button class="btn-dashed" onclick="setState({showAdd:true})">+ 일정 추가</button>`;
+    html+=`<button class="btn-dashed" onclick="setState({showAdd:true,newEv:{time:'09:00',title:'',member:'${state.activeMember||'mom'}',alert:null,memo:''}})">+ 일정 추가</button>`;
   }else{
     html+=`<div style="margin-bottom:12px">${evForm(state.newEv,'new','addEvent','()=>setState({showAdd:false,newEv:{time:"09:00",title:"",member:"mom",alert:null,memo:""}})')}</div>`;
   }
+
   html+=`<div style="position:relative;height:${TH+40}px;margin-left:42px">`;
   hours.forEach(h=>{
     html+=`<div style="position:absolute;top:${minToY(h*60)}px;left:0;right:0;display:flex;align-items:center;pointer-events:none">
@@ -167,18 +249,22 @@ function renderDaily(){
       <div style="height:1px;background:#f0f0f0;width:100%"></div>
     </div>`;
   });
+
   if(isWD){
-    html+=`<div style="position:absolute;top:${minToY(toMin("10:30"))}px;height:${minToH(toMin("10:30"),toMin("10:50"))}px;left:0;right:0;background:#e3f6ff55;border-left:4px solid #74b9ff;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>☕</span><span style="font-weight:600;font-size:12px;color:#4A90D9">쉬는시간</span></div>`;
-    html+=`<div style="position:absolute;top:${minToY(toMin("12:20"))}px;height:${minToH(toMin("12:20"),toMin("13:10"))}px;left:0;right:0;background:#fffbe655;border-left:4px solid #fdcb6e;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>🍱</span><div><div style="font-weight:700;font-size:12px;color:#8B6914">점심시간</div><div style="font-size:10px;color:#bbb">12:20~13:10</div></div></div>`;
-    PERIODS.filter(pp=>!pp.br).forEach(pp=>{
-      const subj=state.tt[dw][pp.p]||"",color=SC[subj]||"#e0e0e0";
-      html+=`<div style="position:absolute;top:${minToY(toMin(pp.s))}px;left:0;right:0;height:${minToH(toMin(pp.s),toMin(pp.e))}px;background:${subj?color+'22':'#f9f9f9'};border-left:4px solid ${subj?color:'#e0e0e0'};border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1">
-        <span style="font-size:13px">${SE[subj]||'📚'}</span>
-        <div><div style="font-weight:700;font-size:12px;color:${subj?'#333':'#ccc'}">${subj||pp.p+'교시'}</div><div style="font-size:10px;color:#bbb">${pp.s}~${pp.e}</div></div>
-        <div style="margin-left:auto;margin-right:7px;font-size:10px;font-weight:800;color:${subj?color:'#ddd'}">${pp.p}교시</div>
-      </div>`;
-    });
+    html+=`<div style="position:absolute;top:${minToY(toMin("10:30"))}px;height:${minToH(toMin("10:30"),toMin("10:40"))}px;left:0;right:0;background:#e3f6ff55;border-left:4px solid #74b9ff;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>☕</span><span style="font-weight:600;font-size:12px;color:#4A90D9">쉬는시간</span></div>`;
+    html+=`<div style="position:absolute;top:${minToY(toMin("12:10"))}px;height:${minToH(toMin("12:10"),toMin("13:10"))}px;left:0;right:0;background:#fffbe655;border-left:4px solid #fdcb6e;border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1"><span>🍱</span><div><div style="font-weight:700;font-size:12px;color:#8B6914">점심시간</div><div style="font-size:10px;color:#bbb">12:10~13:10</div></div></div>`;
+    if(!state.activeMember){
+      getPeriods().filter(pp=>!pp.br).forEach(pp=>{
+        const subj=state.tt[dw][pp.p]||"",color=SC[subj]||"#e0e0e0";
+        html+=`<div style="position:absolute;top:${minToY(toMin(pp.s))}px;left:0;right:0;height:${minToH(toMin(pp.s),toMin(pp.e))}px;background:${subj?color+'22':'#f9f9f9'};border-left:4px solid ${subj?color:'#e0e0e0'};border-radius:0 8px 8px 0;display:flex;align-items:center;padding-left:9px;gap:5px;z-index:1">
+          <span style="font-size:13px">${SE[subj]||'📚'}</span>
+          <div><div style="font-weight:700;font-size:12px;color:${subj?'#333':'#ccc'}">${subj||pp.p+'교시'}</div><div style="font-size:10px;color:#bbb">${pp.s}~${pp.e}</div></div>
+          <div style="margin-left:auto;margin-right:7px;font-size:10px;font-weight:800;color:${subj?color:'#ddd'}">${pp.p}교시</div>
+        </div>`;
+      });
+    }
   }
+
   evList.forEach((ev,idx)=>{
     const mb=M(ev.member),top=minToY(toMin(ev.time)),lo=(idx%2)*12;
     html+=`<div onclick="setState({detail:JSON.parse(JSON.stringify(state.events['${d}'].find(e=>e.id===${ev.id})))})" style="position:absolute;top:${top-2}px;left:${lo}px;right:${-lo}px;height:${ev.memo?62:50}px;background:${mb.c}22;border:2px solid ${mb.c};border-radius:10px;display:flex;align-items:center;padding-left:9px;gap:7px;z-index:${10+idx};cursor:pointer">
@@ -194,6 +280,7 @@ function renderDaily(){
       </div>
     </div>`;
   });
+
   if(isToday&&nm>=DS&&nm<=DE){
     html+=`<div style="position:absolute;top:${minToY(nm)}px;left:-42px;right:0;z-index:20;pointer-events:none;display:flex;align-items:center">
       <div style="font-size:10px;color:#FF6B9D;font-weight:800;width:34px;text-align:right">${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}</div>
@@ -201,6 +288,7 @@ function renderDaily(){
       <div style="flex:1;height:2px;background:linear-gradient(90deg,#FF6B9D,#FF9F43)"></div>
     </div>`;
   }
+
   html+=`</div></div>`;
   return html;
 }
@@ -210,7 +298,7 @@ function renderTimetable(){
   let html=`<div class="content"><div style="display:flex;gap:6px;margin-bottom:14px">
     ${DAYS.map(d=>`<button class="day-btn ${sd===d?'active':''}" onclick="setState({selDay:'${d}'})">${d}</button>`).join('')}
   </div><div>`;
-  PERIODS.forEach(pp=>{
+  getPeriods().forEach(pp=>{
     if(pp.br){html+=`<div style="background:linear-gradient(90deg,#ffeaa7,#fdcb6e);border-radius:12px;padding:8px 14px;display:flex;align-items:center;gap:7px;font-size:12px;color:#8B6914;font-weight:600;margin-bottom:8px">🍱 점심시간 <span style="margin-left:auto;font-weight:400;font-size:11px">${pp.s} ~ ${pp.e}</span></div>`;return;}
     const subj=state.tt[sd][pp.p]||"",color=SC[subj]||"#e9ecef";
     const isEd=state.editing&&state.editing.day===sd&&state.editing.period===pp.p;
@@ -231,18 +319,42 @@ function renderTimetable(){
     }else{
       html+=`<div style="font-weight:700;font-size:15px;color:${subj?'#333':'#ccc'}">${subj||'탭해서 과목 입력'}</div>`;
     }
-    html+=`<div style="font-size:10px;color:#bbb;margin-top:2px">${pp.s} ~ ${pp.e}</div></div>`;
+    // Show time - editable for non-fixed periods
+    const isTimeEd=state.editingTime&&state.editingTime.p===pp.p;
+    if(!pp.fixed&&!isEd){
+      if(isTimeEd){
+        html+=`<div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;margin-top:4px">
+          <input type="time" value="${state.editingTime.s}" onchange="state.editingTime={...state.editingTime,s:this.value}" style="padding:3px 6px;border-radius:7px;border:1.5px solid #ffd3e8;font-size:11px;width:88px">
+          <span style="color:#ccc;font-size:11px">~</span>
+          <input type="time" value="${state.editingTime.e}" onchange="state.editingTime={...state.editingTime,e:this.value}" style="padding:3px 6px;border-radius:7px;border:1.5px solid #ffd3e8;font-size:11px;width:88px">
+          <button onclick="saveTime()" style="padding:3px 8px;border-radius:7px;border:none;background:linear-gradient(135deg,#FF6B9D,#FF9F43);color:#fff;font-size:11px;font-weight:700;cursor:pointer">저장</button>
+        </div>`;
+      }else{
+        html+=`<div style="display:flex;align-items:center;gap:5px;margin-top:2px">
+          <span style="font-size:10px;color:#bbb">${pp.s} ~ ${pp.e}</span>
+          <button onclick="event.stopPropagation();setState({editingTime:{p:${pp.p},s:'${pp.s}',e:'${pp.e}'}})" style="padding:1px 7px;border-radius:6px;border:1px solid #ffd3e8;background:#fff0f5;color:#FF6B9D;font-size:10px;font-weight:700;cursor:pointer">수정</button>
+        </div>`;
+      }
+    }else{
+      html+=`<div style="font-size:10px;color:#bbb;margin-top:2px">${pp.s} ~ ${pp.e}</div>`;
+    }
+    html+=`</div>`;
     if(!isEd&&subj)html+=`<div style="width:32px;height:32px;border-radius:10px;background:${color}33;display:flex;align-items:center;justify-content:center;font-size:16px">${SE[subj]||'📚'}</div>`;
+    if(!pp.fixed&&!isEd)html+=`<button onclick="event.stopPropagation();deletePeriod(${pp.p})" style="background:none;border:none;cursor:pointer;color:#e0e0e0;font-size:16px;padding:0 4px;align-self:flex-start;margin-top:2px">✕</button>`;
     html+=`</div>`;
   });
-  html+=`</div><div style="margin-top:14px;background:#fff0f5;border-radius:12px;padding:9px 14px;font-size:11px;color:#FF6B9D;font-weight:600;text-align:center">💡 2교시 후 쉬는시간 10:30~10:50 · 점심 12:20~13:10</div></div>`;
+  html+=`</div>
+  <button onclick="addPeriod()" style="width:100%;padding:10px 0;border:2px dashed #ffd3e8;border-radius:12px;background:transparent;color:#FF6B9D;font-weight:700;font-size:13px;cursor:pointer;margin-top:4px">+ 교시 추가</button>
+  <div style="margin-top:10px;background:#fff0f5;border-radius:12px;padding:9px 14px;font-size:11px;color:#FF6B9D;font-weight:600;text-align:center">💡 2교시 후 쉬는시간 10:30~10:40 · 점심 12:10~13:10</div></div>`;
   return html;
 }
 
 function renderCalendar(){
   const{year,month}=state.calMonth;
   const days=new Date(year,month+1,0).getDate(),fd=new Date(year,month,1).getDay();
-  const d=state.selDate,evList=(state.events[d]||[]).sort((a,b)=>a.time.localeCompare(b.time));
+  const d=state.selDate;
+  const evList=filteredEvents(d).sort((a,b)=>a.time.localeCompare(b.time));
+
   let calH=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
     <button class="nav-btn" onclick="setState({calMonth:{year:${month===0?year-1:year},month:${month===0?11:month-1}}})">‹</button>
     <div style="font-weight:800;font-size:15px;color:#333">${year}년 ${month+1}월</div>
@@ -250,10 +362,13 @@ function renderCalendar(){
   </div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">
     ${["일","월","화","수","목","금","토"].map(dd=>`<div style="text-align:center;font-weight:700;font-size:11px;color:${dd==="일"?"#FF6B6B":dd==="토"?"#4A90D9":"#888"};padding:3px 0">${dd}</div>`).join('')}`;
+
   for(let i=0;i<fd;i++)calH+=`<div></div>`;
   for(let dd=1;dd<=days;dd++){
     const key=`${year}-${String(month+1).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
-    const hasEv=(state.events[key]||[]).length>0,hasAl=(state.events[key]||[]).some(e=>e.alert!==null&&e.alert!==undefined);
+    const dayEvs=filteredEvents(key);
+    const hasEv=dayEvs.length>0;
+    const hasAl=dayEvs.some(e=>e.alert!==null&&e.alert!==undefined);
     const isSel=key===d,isTod=key===todayStr(),dw2=(fd+dd-1)%7;
     calH+=`<div class="cal-cell" onclick="setState({selDate:'${key}'})" style="background:${isSel?'#FF6B9D':isTod?'#fff0f5':'transparent'};color:${isSel?'#fff':dw2===0?'#FF6B6B':dw2===6?'#4A90D9':'#333'};font-weight:${isTod||isSel?700:400}">
       ${dd}
@@ -263,26 +378,38 @@ function renderCalendar(){
       </div>
     </div>`;
   }
-  calH+=`</div></div><div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
-    <div style="font-weight:800;font-size:14px;color:#333">📋 ${fmt(d)} 일정</div>
-    <button class="btn-primary" onclick="setState({showAdd:true})">+ 추가</button>
-  </div>`;
+
+  calH+=`</div></div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
+      <div style="font-weight:800;font-size:14px;color:#333">📋 ${fmt(d)} 일정</div>
+      <button class="btn-primary" onclick="setState({showAdd:true,newEv:{time:'09:00',title:'',member:'${state.activeMember||'mom'}',alert:null,memo:''}})">+ 추가</button>
+    </div>`;
+
   if(state.showAdd&&state.tab==='calendar'){
     calH+=`<div style="margin-bottom:10px">${evForm(state.newEv,'new','addEvent','()=>setState({showAdd:false,newEv:{time:"09:00",title:"",member:"mom",alert:null,memo:""}})')}</div>`;
   }
-  if(evList.length===0){calH+=`<div style="text-align:center;color:#ccc;font-size:13px;padding:16px 0">😊 등록된 일정이 없어요</div>`;}
-  else{evList.forEach(ev=>{const mb=M(ev.member);calH+=`<div class="ev-card" onclick="setState({detail:JSON.parse(JSON.stringify(state.events['${d}'].find(e=>e.id===${ev.id})))})" style="background:${mb.c}15;border-left:4px solid ${mb.c}">
-    <div style="font-weight:800;color:${mb.c};font-size:12px;min-width:38px;padding-top:2px">${ev.time}</div>
-    <div style="flex:1;min-width:0">
-      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-        <span style="font-weight:700;font-size:13px;color:#333">${ev.title}</span>
-        ${ev.alert!==null&&ev.alert!==undefined?`<span style="background:#fff3cd;border-radius:7px;padding:1px 6px;font-size:10px;color:#d48806;font-weight:700">🔔 ${AO.find(o=>o.v===ev.alert)?.l}</span>`:''}
-      </div>
-      <div style="font-size:10px;color:#aaa;margin-top:2px">${mb.e} ${mb.n}</div>
-      ${ev.memo?`<div style="margin-top:4px;font-size:11px;color:#888;background:#fff;border-radius:7px;padding:4px 7px;border-left:2px solid #ffd3e8">${ev.memo.length>50?ev.memo.slice(0,50)+'…':ev.memo}</div>`:''}
-    </div>
-    <button onclick="event.stopPropagation();delEvent(${ev.id})" style="background:none;border:none;cursor:pointer;color:#e0e0e0;font-size:13px;align-self:flex-start">✕</button>
-  </div>`;});}
+
+  if(evList.length===0){
+    const mb=state.activeMember?M(state.activeMember):null;
+    calH+=`<div class="empty-state"><div class="emoji">😊</div><div style="font-size:13px">${mb?mb.n+'의 ':''} 등록된 일정이 없어요</div></div>`;
+  }else{
+    evList.forEach(ev=>{
+      const mb=M(ev.member);
+      calH+=`<div class="ev-card" onclick="setState({detail:JSON.parse(JSON.stringify(state.events['${d}'].find(e=>e.id===${ev.id})))})" style="background:${mb.c}15;border-left:4px solid ${mb.c}">
+        <div style="font-weight:800;color:${mb.c};font-size:12px;min-width:38px;padding-top:2px">${ev.time}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:13px;color:#333">${ev.title}</span>
+            ${ev.alert!==null&&ev.alert!==undefined?`<span style="background:#fff3cd;border-radius:7px;padding:1px 6px;font-size:10px;color:#d48806;font-weight:700">🔔 ${AO.find(o=>o.v===ev.alert)?.l}</span>`:''}
+          </div>
+          <div style="font-size:10px;color:#aaa;margin-top:2px">${mb.e} ${mb.n}</div>
+          ${ev.memo?`<div style="margin-top:4px;font-size:11px;color:#888;background:#fff;border-radius:7px;padding:4px 7px;border-left:2px solid #ffd3e8">${ev.memo.length>50?ev.memo.slice(0,50)+'…':ev.memo}</div>`:''}
+        </div>
+      </div>`;
+    });
+  }
+
   calH+=`</div>`;
   return `<div class="content">${calH}</div>`;
 }
@@ -290,14 +417,14 @@ function renderCalendar(){
 function renderModal(){
   if(!state.detail)return'';
   const ev=state.detail,mb=M(ev.member),d=state.selDate;
-  let html=`<div class="overlay" onclick="if(event.target===this)setState({detail:null,editingEv:null})"><div class="modal">`;
+  let html=`<div class="overlay" onclick="if(event.target===this)setState({detail:null,editingEv:null,confirmDelete:null})"><div class="modal">`;
   if(state.editingEv){
     html+=`<div style="font-weight:800;font-size:15px;color:#333;margin-bottom:12px">✏️ 일정 수정</div>`;
     html+=evForm(state.editingEv,'edit','saveEdit','()=>setState({editingEv:null})','수정 저장');
   }else{
     html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div style="font-weight:800;font-size:16px;color:#333">${ev.title}</div>
-      <button class="btn-ghost" onclick="setState({detail:null})">닫기</button>
+      <button class="btn-ghost" onclick="setState({detail:null,confirmDelete:null})">닫기</button>
     </div>
     <div class="info-row"><span style="font-size:16px">🕐</span><div><div style="font-size:10px;color:#aaa;font-weight:600">시간</div><div style="font-weight:700;font-size:13px;color:#333">${fmt(d)} ${ev.time}</div></div></div>
     <div class="info-row"><span style="font-size:16px">${mb.e}</span><div><div style="font-size:10px;color:#aaa;font-weight:600">담당</div><div style="font-weight:700;font-size:13px;color:${mb.c}">${mb.n}</div></div></div>
@@ -307,7 +434,18 @@ function renderModal(){
       <div style="font-weight:700;font-size:13px;color:${ev.alert!==null&&ev.alert!==undefined?'#d48806':'#ccc'}">${ev.alert!==null&&ev.alert!==undefined?AO.find(o=>o.v===ev.alert)?.l:'없음'}</div></div>
     </div>
     ${ev.memo?`<div style="background:#fff0f5;border-radius:10px;padding:11px 12px;margin-bottom:8px"><div style="font-size:10px;color:#FF6B9D;font-weight:700;margin-bottom:5px">📝 메모</div><div style="font-size:13px;color:#444;white-space:pre-wrap;line-height:1.6">${ev.memo}</div></div>`:`<div class="info-row" style="color:#ccc;font-size:12px">📝 메모 없음</div>`}
-    <button class="btn-primary" style="width:100%;padding:11px 0;font-size:14px;border-radius:12px;margin-top:4px" onclick="setState({editingEv:JSON.parse(JSON.stringify(state.detail))})">✏️ 수정하기</button>`;
+    ${state.confirmDelete===ev.id?`
+    <div style="background:#fff0f0;border-radius:12px;padding:14px;margin-top:4px;text-align:center">
+      <div style="font-size:14px;font-weight:700;color:#e74c3c;margin-bottom:12px">정말 삭제할까요?</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" style="flex:1;padding:10px 0;border-radius:12px" onclick="setState({confirmDelete:null})">취소</button>
+        <button class="btn-danger" style="flex:1;padding:10px 0;font-size:14px;border-radius:12px" onclick="delEvent(${ev.id})">삭제</button>
+      </div>
+    </div>`:`
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-primary" style="flex:2;padding:11px 0;font-size:14px;border-radius:12px" onclick="setState({editingEv:JSON.parse(JSON.stringify(state.detail))})">✏️ 수정하기</button>
+      <button class="btn-danger" style="flex:1;padding:11px 0;font-size:14px;border-radius:12px" onclick="setState({confirmDelete:${ev.id}})">🗑️ 삭제</button>
+    </div>`}`;
   }
   html+=`</div></div>`;
   return html;
@@ -315,13 +453,8 @@ function renderModal(){
 
 function render(){
   document.getElementById('app').innerHTML=`
-  <div class="header">
-    <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
-      <span style="font-size:24px">🏠</span>
-      <div><div class="header-title">우리 가족 스케줄</div><div class="header-sub">Family Planner</div></div>
-    </div>
-    <div style="display:flex;gap:7px">${MEMBERS.map(m=>`<div class="member-badge">${m.e} ${m.n}</div>`).join('')}</div>
-  </div>
+  ${renderHeader()}
+  ${renderFilterBanner()}
   <div class="tabs">
     ${[{id:"daily",l:"🗓 데일리"},{id:"timetable",l:"📚 시간표"},{id:"calendar",l:"📅 캘린더"}].map(t=>`<button class="tab ${state.tab===t.id?'active':''}" onclick="setState({tab:'${t.id}'})">${t.l}</button>`).join('')}
   </div>
